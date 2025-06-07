@@ -20,6 +20,7 @@ use tokio::io::{self, AsyncRead};
 use tokio::net::TcpStream;
 use tokio::time::{timeout, Instant};
 use std::time::Duration;
+use async_recursion::async_recursion;
 #[cfg(any(feature = "rustls-webpki", feature = "rustls"))]
 use webpki_roots::TLS_SERVER_ROOTS;
 
@@ -237,6 +238,7 @@ impl Connection {
 
     /// Sends the [`Request`](struct.Request.html), consumes this
     /// connection, and returns a [`Response`](struct.Response.html).
+    #[async_recursion]
     pub(crate) async fn send(self) -> Result<ResponseLazy, Error> {
         match self.timeout()? {
             None => {
@@ -251,6 +253,7 @@ impl Connection {
         }
     }
 
+    #[async_recursion]
     async fn send_without_timeout(mut self) -> Result<ResponseLazy, Error> {
         self.request.url.host = ensure_ascii_host(self.request.url.host)?;
         let bytes = self.request.as_bytes();
@@ -345,7 +348,7 @@ impl Connection {
         Err(Error::AddressNotFound)
     }
 }
-
+#[async_recursion]
 async fn handle_redirects(
     connection: Connection,
     mut response: ResponseLazy,
