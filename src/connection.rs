@@ -13,6 +13,7 @@ use {
     std::sync::Arc,
     tokio_rustls::TlsConnector,
     tokio_rustls::client::TlsStream,
+    once_cell::sync::Lazy,
 };
 use std::env;
 use std::net::ToSocketAddrs;
@@ -26,7 +27,7 @@ use async_recursion::async_recursion;
 use webpki_roots::TLS_SERVER_ROOTS;
 
 #[cfg(feature = "rustls")]
-static CONFIG: std::sync::LazyLock<Arc<ClientConfig>> = std::sync::LazyLock::new(|| {
+static CONFIG: Lazy<Arc<ClientConfig>> = Lazy::new(|| {
     let mut root_certificates = RootCertStore::empty();
     root_certificates.extend(TLS_SERVER_ROOTS.iter().cloned());
 

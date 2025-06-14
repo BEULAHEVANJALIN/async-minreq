@@ -45,6 +45,7 @@ tokio-rustls = "0.26.2"
 rustls-pki-types = "1.11.0"
 webpki = "0.22.4"
 async-recursion = "1.1.1"
+once_cell = "1.17.3"
 
 [dev-dependencies]
 tiny_http = "0.12"
