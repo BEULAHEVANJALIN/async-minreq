@@ -11,7 +11,8 @@ use {
     rustls_pki_types::ServerName,
     std::convert::TryFrom,
     std::sync::Arc,
-    tokio_rustls::TlsConnector,TlsStream,
+    tokio_rustls::TlsConnector,
+    tokio_rustls::TlsStream
 };
 use std::env;
 use std::net::ToSocketAddrs;
