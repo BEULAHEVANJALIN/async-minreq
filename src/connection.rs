@@ -12,12 +12,12 @@ use {
     std::convert::TryFrom,
     std::sync::Arc,
     tokio_rustls::TlsConnector,
-    tokio_rustls::TlsStream
+    tokio_rustls::client::TlsStream,
 };
 use std::env;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
-use tokio::io::{self, AsyncRead};
+use tokio::io::{self, AsyncRead, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{timeout, Instant};
 use std::time::Duration;
