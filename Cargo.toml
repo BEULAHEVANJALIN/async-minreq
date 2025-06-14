@@ -44,6 +44,7 @@ pin-project = "1.1.10"
 tokio-rustls = "0.26.2"
 rustls-pki-types = "1.11.0"
 webpki = "0.22.4"
+async-recursion = "1.1.1"
 
 [dev-dependencies]
 tiny_http = "0.12"
