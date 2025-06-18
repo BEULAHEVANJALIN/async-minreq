@@ -1,29 +1,32 @@
+use crate::request::ParsedRequest;
+use crate::{Error, Method, ResponseLazy};
+use async_recursion::async_recursion;
+use std::env;
+use std::net::ToSocketAddrs;
+use std::pin::Pin;
+use std::time::Duration;
+use tokio::io::{self, AsyncRead, AsyncWriteExt};
+use tokio::net::TcpStream;
+use tokio::time::{timeout, Instant};
+#[cfg(any(feature = "rustls-webpki", feature = "rustls"))]
+use webpki_roots::TLS_SERVER_ROOTS;
 #[cfg(all(
     not(feature = "rustls"),
     any(feature = "openssl", feature = "native-tls")
 ))]
-use crate::native_tls::{TlsConnector, TlsStream};
-use crate::request::ParsedRequest;
-use crate::{Error, Method, ResponseLazy};
+use {
+    crate::native_tls::TlsConnector, crate::tokio_native_tls::TlsConnector as TokioTlsConnector,
+    crate::tokio_native_tls::TlsStream,
+};
 #[cfg(feature = "rustls")]
 use {
-    tokio_rustls::rustls::{ClientConfig, RootCertStore},
     rustls_pki_types::ServerName,
     std::convert::TryFrom,
     std::sync::Arc,
-    tokio_rustls::TlsConnector,
     tokio_rustls::client::TlsStream,
+    tokio_rustls::rustls::{ClientConfig, RootCertStore},
+    tokio_rustls::TlsConnector,
 };
-use std::env;
-use std::net::ToSocketAddrs;
-use std::pin::Pin;
-use tokio::io::{self, AsyncRead, AsyncWriteExt};
-use tokio::net::TcpStream;
-use tokio::time::{timeout, Instant};
-use std::time::Duration;
-use async_recursion::async_recursion;
-#[cfg(any(feature = "rustls-webpki", feature = "rustls"))]
-use webpki_roots::TLS_SERVER_ROOTS;
 
 #[cfg(feature = "rustls")]
 static CONFIG: std::sync::LazyLock<Arc<ClientConfig>> = std::sync::LazyLock::new(|| {
@@ -32,13 +35,15 @@ static CONFIG: std::sync::LazyLock<Arc<ClientConfig>> = std::sync::LazyLock::new
 
     // Try to load native certs
     #[cfg(feature = "https-rustls-probe")]
-    let rustls_native_certs::CertificateResult { certs, .. } = rustls_native_certs::load_native_certs();
-    for cert in certs {
-        // Ignore erroneous OS certificates, there's nothing
-        // to do differently in that situation anyways.
-        let _ = root_certificates.add(cert);
+    {
+        let rustls_native_certs::CertificateResult { certs, .. } =
+            rustls_native_certs::load_native_certs();
+        for cert in certs {
+            // Ignore erroneous OS certificates, there's nothing
+            // to do differently in that situation anyways.
+            let _ = root_certificates.add(cert);
+        }
     }
-
     let config = ClientConfig::builder()
         .with_root_certificates(root_certificates)
         .with_no_client_auth();
@@ -100,8 +105,8 @@ impl AsyncRead for HttpStream {
             HttpStream::Unsecured(ref mut stream, _) => {
                 // Delegate the read operation to the TcpStream
                 Pin::new(stream).poll_read(cx, buf)
-            },
-            _ => todo!()
+            }
+            _ => todo!(),
         }
     }
 }
@@ -146,15 +151,11 @@ impl Connection {
     #[cfg(feature = "rustls")]
     pub(crate) async fn send_https(self) -> Result<ResponseLazy, Error> {
         match self.timeout()? {
-            None => {
-                self.send_https_without_timeout().await
+            None => self.send_https_without_timeout().await,
+            Some(duration) => match timeout(duration, self.send_https_without_timeout()).await {
+                Ok(result) => result,
+                Err(_) => Err(Error::IoError(timeout_err())),
             },
-            Some(duration) => {
-                match timeout(duration, self.send_https_without_timeout()).await {
-                    Ok(result) => result,
-                    Err(_) => Err(Error::IoError(timeout_err())),
-                }
-            }
         }
     }
 
@@ -186,45 +187,52 @@ impl Connection {
             HttpStream::create_secured(tls, self.timeout_at),
             self.request.config.max_headers_size,
             self.request.config.max_status_line_len,
-        ).await?;
+        )
+        .await?;
         handle_redirects(self, response).await
     }
 
-    /// Sends the [`Request`](struct.Request.html), consumes this
-    /// connection, and returns a [`Response`](struct.Response.html).
+    // / Sends the [`Request`](struct.Request.html), consumes this
+    // / connection, and returns a [`Response`](struct.Response.html).
     #[cfg(all(
         not(feature = "rustls"),
         any(feature = "openssl", feature = "native-tls")
     ))]
     pub(crate) async fn send_https(mut self) -> Result<ResponseLazy, Error> {
-        enforce_timeout(self.timeout_at, move || {
+        let duration = timeout_at_to_duration(self.timeout_at)?;
+        let native = TlsConnector::builder()
+            .build()
+            .map_err(|e| Error::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
+        let connector = TokioTlsConnector::from(native);
+
+        let func = async move {
             self.request.url.host = ensure_ascii_host(self.request.url.host)?;
             let bytes = self.request.as_bytes();
 
             log::trace!("Setting up TLS parameters for {}.", self.request.url.host);
-            let dns_name = &self.request.url.host;
+            let dns_name = self.request.url.host.as_str();
             /*
             let mut builder = TlsConnector::builder();
             ...
             let sess = match builder.build() {
             */
-            let sess = match TlsConnector::new() {
-                Ok(sess) => sess,
-                Err(err) => return Err(Error::IoError(io::Error::new(io::ErrorKind::Other, err))),
-            };
 
             log::trace!("Establishing TCP connection to {}.", self.request.url.host);
-            let tcp = self.connect()?;
+            let tcp = self.connect().await?;
 
             // Send request
             log::trace!("Establishing TLS session to {}.", self.request.url.host);
-            let mut tls = match sess.connect(dns_name, tcp) {
-                Ok(tls) => tls,
-                Err(err) => return Err(Error::IoError(io::Error::new(io::ErrorKind::Other, err))),
-            };
-            log::trace!("Writing HTTPS request to {}.", self.request.url.host);
+            let mut tls = connector
+                .connect(dns_name, tcp)
+                .await
+                .map_err(|e| Error::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+
             let _ = tls.get_ref().set_write_timeout(self.timeout()?);
-            tls.write_all(&bytes)?;
+
+            log::trace!("Writing HTTPS request to {}.", self.request.url.host);
+            // let _ = tls.get_ref().set_write_timeout(self.timeout()?);
+            tls.write_all(&bytes).await?;
 
             // Receive request
             log::trace!("Reading HTTPS response from {}.", self.request.url.host);
@@ -232,9 +240,20 @@ impl Connection {
                 HttpStream::create_secured(tls, self.timeout_at),
                 self.request.config.max_headers_size,
                 self.request.config.max_status_line_len,
-            )?;
-            handle_redirects(self, response)
-        })
+            )
+            .await?;
+
+            Ok(handle_redirects(self, response).await?)
+        };
+
+        if let Some(dur) = duration {
+            match timeout(dur, func).await {
+                Ok(res) => res,
+                Err(_) => Err(Error::IoError(timeout_err())),
+            }
+        } else {
+            func.await
+        }
     }
 
     /// Sends the [`Request`](struct.Request.html), consumes this
@@ -242,15 +261,11 @@ impl Connection {
     #[async_recursion]
     pub(crate) async fn send(self) -> Result<ResponseLazy, Error> {
         match self.timeout()? {
-            None => {
-                self.send_without_timeout().await
+            None => self.send_without_timeout().await,
+            Some(duration) => match timeout(duration, self.send_without_timeout()).await {
+                Ok(result) => result,
+                Err(_) => Err(Error::IoError(timeout_err())),
             },
-            Some(duration) => {
-                match timeout(duration, self.send_without_timeout()).await {
-                    Ok(result) => result,
-                    Err(_) => Err(Error::IoError(timeout_err())),
-                }
-            }
         }
     }
 
@@ -288,7 +303,8 @@ impl Connection {
             stream,
             self.request.config.max_headers_size,
             self.request.config.max_status_line_len,
-        ).await?;
+        )
+        .await?;
         handle_redirects(self, response).await
     }
 
@@ -321,13 +337,12 @@ impl Connection {
         }
 
         #[cfg(not(feature = "proxy"))]
-        self.tcp_connect(&self.request.url.host, self.request.url.port.port()).await
+        self.tcp_connect(&self.request.url.host, self.request.url.port.port())
+            .await
     }
 
     async fn tcp_connect(&self, host: &str, port: u16) -> Result<TcpStream, Error> {
-        let addrs = (host, port)
-            .to_socket_addrs()
-            .map_err(Error::IoError)?;
+        let addrs = (host, port).to_socket_addrs().map_err(Error::IoError)?;
         let addrs_count = addrs.len();
 
         // Try all resolved addresses. Return the first one to which we could connect. If all

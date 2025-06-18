@@ -6,7 +6,7 @@ use tokio_stream::StreamExt;
 #[tokio::main]
 async fn main() -> Result<(), async_minreq::Error> {
     let mut buffer: Vec<u8> = Vec::new();
-    let mut response_lazy =  async_minreq::get("http://example.com").send_lazy().await?;
+    let mut response_lazy = async_minreq::get("http://example.com").send_lazy().await?;
     while let Some(chunk) = response_lazy.next().await {
         // The connection could have a problem at any point during the
         // download, so each byte needs to be unwrapped.
