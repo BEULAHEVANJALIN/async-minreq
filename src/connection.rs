@@ -228,7 +228,7 @@ impl Connection {
                 .await
                 .map_err(|e| Error::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
-            let _ = tls.get_ref().set_write_timeout(self.timeout()?);
+            // let _ = tls.get_ref().set_write_timeout(self.timeout()?);
 
             log::trace!("Writing HTTPS request to {}.", self.request.url.host);
             // let _ = tls.get_ref().set_write_timeout(self.timeout()?);
