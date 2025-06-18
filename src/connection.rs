@@ -26,10 +26,11 @@ use {
     tokio_rustls::client::TlsStream,
     tokio_rustls::rustls::{ClientConfig, RootCertStore},
     tokio_rustls::TlsConnector,
+    once_cell::sync::Lazy,
 };
 
 #[cfg(feature = "rustls")]
-static CONFIG: std::sync::LazyLock<Arc<ClientConfig>> = std::sync::LazyLock::new(|| {
+static CONFIG: Lazy<Arc<ClientConfig>> = Lazy::new(|| {
     let mut root_certificates = RootCertStore::empty();
     root_certificates.extend(TLS_SERVER_ROOTS.iter().cloned());
 
