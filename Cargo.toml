@@ -43,7 +43,6 @@ pin-project = "1.1.10"
 tokio-rustls = "0.26.2"
 rustls-pki-types = "1.11.0"
 webpki = "0.22.4"
-async-recursion = "1.1.1"
 tokio-native-tls = { version = "0.3.1", optional = true }
 native-tls = { version = "0.2", optional = true }
 once_cell = "1.20.3"

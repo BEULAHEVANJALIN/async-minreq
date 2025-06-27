@@ -1,11 +1,11 @@
 use crate::request::ParsedRequest;
 use crate::{Error, Method, ResponseLazy};
-use async_recursion::async_recursion;
 use std::env;
+use std::future::Future;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
 use std::time::Duration;
-use tokio::io::{self, AsyncRead, AsyncWriteExt};
+use tokio::io::{self, AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{timeout, Instant};
 #[cfg(any(feature = "rustls-webpki", feature = "rustls"))]
@@ -20,13 +20,13 @@ use {
 };
 #[cfg(feature = "rustls")]
 use {
+    once_cell::sync::Lazy,
     rustls_pki_types::ServerName,
     std::convert::TryFrom,
     std::sync::Arc,
     tokio_rustls::client::TlsStream,
     tokio_rustls::rustls::{ClientConfig, RootCertStore},
     tokio_rustls::TlsConnector,
-    once_cell::sync::Lazy,
 };
 
 #[cfg(feature = "rustls")]
@@ -259,20 +259,19 @@ impl Connection {
 
     /// Sends the [`Request`](struct.Request.html), consumes this
     /// connection, and returns a [`Response`](struct.Response.html).
-    #[async_recursion]
-    pub(crate) async fn send(self) -> Result<ResponseLazy, Error> {
-        match self.timeout()? {
+    pub(crate) fn send(self) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
+       Box::pin(async move { match self.timeout()? {
             None => self.send_without_timeout().await,
             Some(duration) => match timeout(duration, self.send_without_timeout()).await {
                 Ok(result) => result,
                 Err(_) => Err(Error::IoError(timeout_err())),
             },
         }
+    })
     }
 
-    #[async_recursion]
-    async fn send_without_timeout(mut self) -> Result<ResponseLazy, Error> {
-        self.request.url.host = ensure_ascii_host(self.request.url.host)?;
+    fn send_without_timeout(mut self) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
+       Box::pin(async move {  self.request.url.host = ensure_ascii_host(self.request.url.host)?;
         let bytes = self.request.as_bytes();
 
         log::trace!("Establishing TCP connection to {}.", self.request.url.host);
@@ -307,6 +306,8 @@ impl Connection {
         )
         .await?;
         handle_redirects(self, response).await
+
+    })
     }
 
     async fn connect(&self) -> Result<TcpStream, Error> {
@@ -314,16 +315,19 @@ impl Connection {
         match self.request.config.proxy {
             Some(ref proxy) => {
                 // do proxy things
-                let mut tcp = tcp_connect(&proxy.server, proxy.port)?;
-
-                write!(tcp, "{}", proxy.connect(&self.request)).unwrap();
-                tcp.flush()?;
+                let mut tcp = self.tcp_connect(&proxy.server, proxy.port as u16).await?;
+                let connect_payload = proxy.connect(&self.request);
+                tcp.write_all(connect_payload.as_bytes())
+                    .await
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                // write!(tcp, "{}", proxy.connect(&self.request)).unwrap();
+                tcp.flush().await?;
 
                 let mut proxy_response = Vec::new();
 
                 loop {
                     let mut buf = vec![0; 256];
-                    let total = tcp.read(&mut buf)?;
+                    let total = tcp.read(&mut buf).await?;
                     proxy_response.append(&mut buf);
                     if total < 256 {
                         break;
@@ -334,7 +338,10 @@ impl Connection {
 
                 Ok(tcp)
             }
-            None => tcp_connect(&self.request.url.host, self.request.url.port.port()),
+            None => {
+                self.tcp_connect(&self.request.url.host, self.request.url.port.port())
+                    .await
+            }
         }
 
         #[cfg(not(feature = "proxy"))]
@@ -366,36 +373,37 @@ impl Connection {
     }
 }
 
-#[async_recursion]
-async fn handle_redirects(
+fn handle_redirects(
     connection: Connection,
     mut response: ResponseLazy,
-) -> Result<ResponseLazy, Error> {
-    let status_code = response.status_code;
-    let url = response.headers.get("location");
-    match get_redirect(connection, status_code, url) {
-        NextHop::Redirect(connection) => {
-            let connection = connection?;
-            if connection.request.url.https {
-                #[cfg(not(any(
-                    feature = "rustls",
-                    feature = "openssl",
-                    feature = "native-tls"
-                )))]
-                return Err(Error::HttpsFeatureNotEnabled);
-                #[cfg(any(feature = "rustls", feature = "openssl", feature = "native-tls"))]
-                return Box::pin(connection.send_https()).await;
-            } else {
-                Box::pin(connection.send()).await
+) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
+    Box::pin(async move {
+        let status_code = response.status_code;
+        let url = response.headers.get("location");
+        match get_redirect(connection, status_code, url) {
+            NextHop::Redirect(connection) => {
+                let connection = connection?;
+                if connection.request.url.https {
+                    #[cfg(not(any(
+                        feature = "rustls",
+                        feature = "openssl",
+                        feature = "native-tls"
+                    )))]
+                    return Err(Error::HttpsFeatureNotEnabled);
+                    #[cfg(any(feature = "rustls", feature = "openssl", feature = "native-tls"))]
+                    return connection.send_https().await;
+                } else {
+                    connection.send().await
+                }
+            }
+            NextHop::Destination(connection) => {
+                let dst_url = connection.request.url;
+                dst_url.write_base_url_to(&mut response.url).unwrap();
+                dst_url.write_resource_to(&mut response.url).unwrap();
+                Ok(response)
             }
         }
-        NextHop::Destination(connection) => {
-            let dst_url = connection.request.url;
-            dst_url.write_base_url_to(&mut response.url).unwrap();
-            dst_url.write_resource_to(&mut response.url).unwrap();
-            Ok(response)
-        }
-    }
+    })
 }
 
 enum NextHop {
