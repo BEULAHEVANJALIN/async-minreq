@@ -4,6 +4,7 @@
 ![Unit tests](https://github.com/neonmoe/minreq/actions/workflows/unit-tests.yml/badge.svg)
 ![MSRV](https://github.com/neonmoe/minreq/actions/workflows/msrv.yml/badge.svg)
 
+This crate is fork of the crate [minreq](https://github.com/neonmoe/minreq), with async capabilities.
 Simple, async minimal-dependency HTTP client. Optional features for json
 responses (`json-using-serde`), unicode domains (`punycode`), http
 proxies (`proxy`), and https with various TLS implementations
