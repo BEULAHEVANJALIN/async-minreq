@@ -34,7 +34,6 @@ rustls-webpki = { version = "0.103.0", optional = true }
 openssl = { version = "0.10.29", optional = true }
 log = { version = "0.4.0" }
 openssl-probe = { version = "0.1", optional = true }
-native-tls = { version = "0.2", optional = true }
 tokio = { version = "1.44.0", features = ["net", "time", "io-util"] }
 tokio-util = { version = "0.7.14", features = ["io"] }
 tokio-stream = "0.1.17"
@@ -43,6 +42,10 @@ bytes = "1.10.1"
 pin-project = "1.1.10"
 tokio-rustls = "0.26.2"
 rustls-pki-types = "1.11.0"
+webpki = "0.22.4"
+tokio-native-tls = { version = "0.3.1", optional = true }
+native-tls = { version = "0.2", optional = true }
+once_cell = "1.20.3"
 
 [dev-dependencies]
 tiny_http = "0.12"
@@ -58,7 +61,7 @@ https-rustls = ["rustls", "webpki-roots", "rustls-webpki"]
 https-rustls-probe = ["rustls", "rustls-native-certs"]
 https-bundled = ["openssl/vendored"]
 https-bundled-probe = ["https-bundled", "openssl-probe"]
-https-native = ["native-tls"]
+https-native = ["dep:tokio-native-tls","native-tls"]
 json-using-serde = ["serde", "serde_json"]
 proxy = ["base64"]
 

@@ -26,7 +26,8 @@ async fn test_json_using_serde() {
     let response = async_minreq::post(url("/echo"))
         .with_json(&original_json)
         .unwrap()
-        .send().await
+        .send()
+        .await
         .unwrap();
     let actual_json: serde_json::Value = response.json().unwrap();
     assert_eq!(&actual_json, &original_json);
@@ -38,7 +39,8 @@ async fn test_timeout_too_low() {
     let result = async_minreq::get(url("/slow_a"))
         .with_body("Q".to_string())
         .with_timeout(1)
-        .send().await;
+        .send()
+        .await;
     assert!(result.is_err());
 }
 
@@ -49,7 +51,8 @@ async fn test_timeout_high_enough() {
         async_minreq::get(url("/slow_a"))
             .with_body("Q".to_string())
             .with_timeout(3)
-            .send().await,
+            .send()
+            .await,
     );
     assert_eq!(body, "j: Q");
 }
@@ -60,7 +63,8 @@ async fn test_headers() {
     let body = get_body(
         async_minreq::get(url("/header_pong"))
             .with_header("Ping", "Qwerty")
-            .send().await,
+            .send()
+            .await,
     );
     assert_eq!("Qwerty", body);
 }
@@ -72,7 +76,8 @@ async fn test_custom_method() {
     let body = get_body(
         async_minreq::Request::new(Method::Custom("GET".to_string()), url("/a"))
             .with_body("Q")
-            .send().await,
+            .send()
+            .await,
     );
     assert_eq!("j: Q", body);
 }
@@ -87,7 +92,12 @@ async fn test_get() {
 #[tokio::test]
 async fn test_redirect_get() {
     setup();
-    let body = get_body(async_minreq::get(url("/redirect")).with_body("Q").send().await);
+    let body = get_body(
+        async_minreq::get(url("/redirect"))
+            .with_body("Q")
+            .send()
+            .await,
+    );
     assert_eq!(body, "j: Q");
 }
 
@@ -98,7 +108,12 @@ async fn test_redirect_post() {
     // make a GET request to the given location. This test relies on
     // the fact that the test server only responds to GET requests on
     // the /a path.
-    let body = get_body(async_minreq::post(url("/redirect")).with_body("Q").send().await);
+    let body = get_body(
+        async_minreq::post(url("/redirect"))
+            .with_body("Q")
+            .send()
+            .await,
+    );
     assert_eq!(body, "j: Q");
 }
 
@@ -130,14 +145,22 @@ async fn test_infinite_redirect() {
 #[tokio::test]
 async fn test_relative_redirect_get() {
     setup();
-    let body = get_body(async_minreq::get(url("/relativeredirect")).with_body("Q").send().await);
+    let body = get_body(
+        async_minreq::get(url("/relativeredirect"))
+            .with_body("Q")
+            .send()
+            .await,
+    );
     assert_eq!(body, "j: Q");
 }
 
 #[tokio::test]
 async fn test_head() {
     setup();
-    assert_eq!(get_status_code(async_minreq::head(url("/b")).send().await), 418);
+    assert_eq!(
+        get_status_code(async_minreq::head(url("/b")).send().await),
+        418
+    );
 }
 
 #[tokio::test]
@@ -157,7 +180,10 @@ async fn test_put() {
 #[tokio::test]
 async fn test_delete() {
     setup();
-    assert_eq!(get_body(async_minreq::delete(url("/e")).send().await), "n: ");
+    assert_eq!(
+        get_body(async_minreq::delete(url("/e")).send().await),
+        "n: "
+    );
 }
 
 #[tokio::test]
@@ -192,7 +218,8 @@ async fn tcp_connect_timeout() {
     let _listener = std::net::TcpListener::bind("127.0.0.1:32162").unwrap();
     let resp = async_minreq::Request::new(async_minreq::Method::Get, "http://127.0.0.1:32162")
         .with_timeout(1)
-        .send().await;
+        .send()
+        .await;
     assert!(resp.is_err());
     if let Some(async_minreq::Error::IoError(err)) = resp.err() {
         assert_eq!(err.kind(), io::ErrorKind::TimedOut);
@@ -206,13 +233,18 @@ async fn test_header_cap() {
     setup();
     let body = async_minreq::get(url("/long_header"))
         .with_max_headers_size(999)
-        .send().await;
+        .send()
+        .await;
     assert!(body.is_err());
-    assert!(matches!(body.err(), Some(async_minreq::Error::HeadersOverflow)));
+    assert!(matches!(
+        body.err(),
+        Some(async_minreq::Error::HeadersOverflow)
+    ));
 
     let body = async_minreq::get(url("/long_header"))
         .with_max_headers_size(1500)
-        .send().await;
+        .send()
+        .await;
     assert!(body.is_ok());
 }
 
@@ -223,7 +255,8 @@ async fn test_status_line_cap() {
 
     let body = async_minreq::get(url("/long_status_line"))
         .with_max_status_line_length(expected_status_line.len() + 1)
-        .send().await;
+        .send()
+        .await;
     assert!(body.is_err());
     assert!(matches!(
         body.err(),
@@ -232,18 +265,21 @@ async fn test_status_line_cap() {
 
     let body = async_minreq::get(url("/long_status_line"))
         .with_max_status_line_length(expected_status_line.len() + 2)
-        .send().await;
+        .send()
+        .await;
     assert!(body.is_ok());
 }
 
 #[tokio::test]
 async fn test_massive_content_length() {
-    use tokio::time::{sleep, Duration};
     use tokio::task;
+    use tokio::time::{sleep, Duration};
     setup();
     task::spawn(async {
         // If async_minreq trusts Content-Length, this should crash pretty much straight away.
-        let _ = async_minreq::get(url("/massive_content_length")).send().await;
+        let _ = async_minreq::get(url("/massive_content_length"))
+            .send()
+            .await;
     });
 
     sleep(Duration::from_millis(500)).await;
