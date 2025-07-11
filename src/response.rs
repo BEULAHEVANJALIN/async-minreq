@@ -5,7 +5,7 @@ use pin_project::pin_project;
 use std::collections::HashMap;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::{str, usize};
+use std::{str};
 use tokio::io::{self, AsyncRead, BufReader};
 use tokio_stream::StreamExt;
 use tokio_util::io::ReaderStream;
@@ -253,7 +253,7 @@ impl ResponseLazy {
             trailing_content,
         } = read_metadata(&mut stream, max_headers_size, max_status_line_len).await?;
 
-        let trailing_content = if trailing_content.len() == 0 {
+        let trailing_content = if trailing_content.is_empty() {
             None
         } else {
             Some(trailing_content)
@@ -290,8 +290,7 @@ impl Stream for ResponseLazy {
         match this.state {
             EndOnClose => read_until_closed(prefix, stream, cx),
             ContentLength(ref mut length) => {
-                let dbg = read_with_content_length(prefix, stream, length, cx);
-                dbg
+                read_with_content_length(prefix, stream, length, cx)
             }
             Chunked(ref mut expecting_chunks, ref mut length, ref mut content_length) => {
                 read_chunked(
@@ -319,7 +318,7 @@ impl AsyncRead for ResponseLazy {
         let stream: Pin<&mut HttpStreamBytes> = this.stream;
 
         if let Some(prefix) = this.trailing_content {
-            buf.put_slice(&prefix);
+            buf.put_slice(prefix);
             *this.trailing_content = None;
         }
 
@@ -345,7 +344,7 @@ fn read_until_closed(
     bytes: Pin<&mut HttpStreamBytes>,
     cx: &mut Context<'_>,
 ) -> Poll<Option<<ResponseLazy as Stream>::Item>> {
-    if prefix.len() > 0 {
+    if !prefix.is_empty() {
         return process_prefix(&prefix);
     }
     match bytes.poll_next(cx) {
