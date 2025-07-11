@@ -259,55 +259,60 @@ impl Connection {
 
     /// Sends the [`Request`](struct.Request.html), consumes this
     /// connection, and returns a [`Response`](struct.Response.html).
-    pub(crate) fn send(self) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
-       Box::pin(async move { match self.timeout()? {
-            None => self.send_without_timeout().await,
-            Some(duration) => match timeout(duration, self.send_without_timeout()).await {
-                Ok(result) => result,
-                Err(_) => Err(Error::IoError(timeout_err())),
-            },
-        }
-    })
+    pub(crate) fn send(
+        self,
+    ) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
+        Box::pin(async move {
+            match self.timeout()? {
+                None => self.send_without_timeout().await,
+                Some(duration) => match timeout(duration, self.send_without_timeout()).await {
+                    Ok(result) => result,
+                    Err(_) => Err(Error::IoError(timeout_err())),
+                },
+            }
+        })
     }
 
-    fn send_without_timeout(mut self) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
-       Box::pin(async move {  self.request.url.host = ensure_ascii_host(self.request.url.host)?;
-        let bytes = self.request.as_bytes();
+    fn send_without_timeout(
+        mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
+        Box::pin(async move {
+            self.request.url.host = ensure_ascii_host(self.request.url.host)?;
+            let bytes = self.request.as_bytes();
 
-        log::trace!("Establishing TCP connection to {}.", self.request.url.host);
-        let tcp = self.connect().await?;
+            log::trace!("Establishing TCP connection to {}.", self.request.url.host);
+            let tcp = self.connect().await?;
 
-        // Send request
-        log::trace!("Writing HTTP request.");
-        loop {
-            // Wait for the socket to be writable
-            tcp.writable().await?;
+            // Send request
+            log::trace!("Writing HTTP request.");
+            loop {
+                // Wait for the socket to be writable
+                tcp.writable().await?;
 
-            match tcp.try_write(&bytes) {
-                Ok(_n) => {
-                    break;
-                }
-                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                    continue;
-                }
-                Err(e) => {
-                    return Err(e.into());
+                match tcp.try_write(&bytes) {
+                    Ok(_n) => {
+                        break;
+                    }
+                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                        continue;
+                    }
+                    Err(e) => {
+                        return Err(e.into());
+                    }
                 }
             }
-        }
 
-        // Receive response
-        log::trace!("Reading HTTP response.");
-        let stream = HttpStream::create_unsecured(tcp, self.timeout_at);
-        let response = ResponseLazy::from_stream(
-            stream,
-            self.request.config.max_headers_size,
-            self.request.config.max_status_line_len,
-        )
-        .await?;
-        handle_redirects(self, response).await
-
-    })
+            // Receive response
+            log::trace!("Reading HTTP response.");
+            let stream = HttpStream::create_unsecured(tcp, self.timeout_at);
+            let response = ResponseLazy::from_stream(
+                stream,
+                self.request.config.max_headers_size,
+                self.request.config.max_status_line_len,
+            )
+            .await?;
+            handle_redirects(self, response).await
+        })
     }
 
     async fn connect(&self) -> Result<TcpStream, Error> {
@@ -320,7 +325,6 @@ impl Connection {
                 tcp.write_all(connect_payload.as_bytes())
                     .await
                     .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                // write!(tcp, "{}", proxy.connect(&self.request)).unwrap();
                 tcp.flush().await?;
 
                 let mut proxy_response = Vec::new();

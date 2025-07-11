@@ -57,13 +57,13 @@ impl fmt::Display for Method {
 
 /// An HTTP request.
 ///
-/// Generally created by the [`minreq::get`](fn.get.html)-style
+/// Generally created by the [`async_minreq::get`](fn.get.html)-style
 /// functions, corresponding to the HTTP method we want to use.
 ///
 /// # Example
 ///
 /// ```
-/// let request = minreq::post("http://example.com");
+/// let request = async_minreq::post("http://example.com");
 /// ```
 ///
 /// After creating the request, you would generally call
@@ -216,7 +216,7 @@ impl Request {
     ///
     /// `None` disables the cap, and may cause the program to use any
     /// amount of memory if the server responds with a lot of headers
-    /// (or an infinite amount). In minreq versions 2.x.x, the default
+    /// (or an infinite amount). In async_minreq versions 2.x.x, the default
     /// is None, so setting this manually is recommended when talking
     /// to untrusted servers.
     pub fn with_max_headers_size<S: Into<Option<usize>>>(mut self, max_headers_size: S) -> Request {
@@ -235,7 +235,7 @@ impl Request {
     ///
     /// `None` disables the cap, and may cause the program to use any
     /// amount of memory if the server responds with a long (or
-    /// infinite) status line. In minreq versions 2.x.x, the default
+    /// infinite) status line. In async_minreq versions 2.x.x, the default
     /// is None, so setting this manually is recommended when talking
     /// to untrusted servers.
     pub fn with_max_status_line_length<S: Into<Option<usize>>>(
@@ -260,7 +260,7 @@ impl Request {
     /// Returns `Err` if we run into an error while sending the
     /// request, or receiving/parsing the response. The specific error
     /// is described in the `Err`, and it can be any
-    /// [`minreq::Error`](enum.Error.html) except
+    /// [`async_minreq::Error`](enum.Error.html) except
     /// [`SerdeJsonError`](enum.Error.html#variant.SerdeJsonError) and
     /// [`InvalidUtf8InBody`](enum.Error.html#variant.InvalidUtf8InBody).
     pub async fn send(self) -> Result<Response, Error> {

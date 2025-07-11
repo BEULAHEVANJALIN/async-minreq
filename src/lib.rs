@@ -1,10 +1,10 @@
-//! # Minreq
+//! # async_minreq
 //!
 //! Simple, minimal-dependency HTTP client.  The library has a very
 //! minimal API, so you'll probably know everything you need to after
 //! reading a few examples.
 //!
-//! Note: as a minimal library, minreq has been written with the
+//! Note: as a minimal library, async_minreq has been written with the
 //! assumption that servers are well-behaved. This means that there is
 //! little error-correction for incoming data, which may cause some
 //! requests to fail unexpectedly. If you're writing an application or
@@ -16,12 +16,12 @@
 //!
 //! Since the crate is supposed to be minimal in terms of
 //! dependencies, there are no default features, and optional
-//! functionality can be enabled by specifying features for `minreq`
+//! functionality can be enabled by specifying features for `async_minreq`
 //! dependency in `Cargo.toml`:
 //!
 //! ```toml
 //! [dependencies]
-//! minreq = { version = "2.13.3-alpha", features = ["punycode"] }
+//! async_minreq = { version = "2.13.3-alpha", features = ["punycode"] }
 //! ```
 //!
 //! Below is the list of all available features.
@@ -111,7 +111,7 @@
 //!
 //! ```
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-//! let response = minreq::get("http://example.com").send().await?;
+//! let response = async_minreq::get("http://example.com").send().await?;
 //! assert!(response.as_str()?.contains("</html>"));
 //! assert_eq!(200, response.status_code);
 //! assert_eq!("OK", response.reason_phrase);
@@ -129,7 +129,7 @@
 //!
 //! ```rust
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-//! let response = minreq::post("http://example.com")
+//! let response = async_minreq::post("http://example.com")
 //!     .with_body("Foobar")
 //!     .send().await?;
 //! # Ok(()) }
@@ -142,7 +142,7 @@
 //!
 //! ```rust
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-//! let response = minreq::get("http://example.com")
+//! let response = async_minreq::get("http://example.com")
 //!     .with_header("Accept", "text/html")
 //!     .send().await?;
 //! # Ok(()) }
@@ -159,7 +159,7 @@
 //!
 //! ```rust
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-//! let response = minreq::get("http://example.com").send().await?;
+//! let response = async_minreq::get("http://example.com").send().await?;
 //! assert!(response.headers.get("content-type").unwrap().starts_with("text/html"));
 //! # Ok(()) }
 //! ```
@@ -173,7 +173,7 @@
 //!
 //! ```no_run
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-//! let response = minreq::post("http://example.com")
+//! let response = async_minreq::post("http://example.com")
 //!     .with_timeout(10)
 //!     .send().await?;
 //! # Ok(()) }
@@ -192,8 +192,8 @@
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! #[cfg(feature = "proxy")]
 //! {
-//!     let proxy = minreq::Proxy::new("localhost:8080")?;
-//!     let response = minreq::post("http://example.com")
+//!     let proxy = async_minreq::Proxy::new("localhost:8080")?;
+//!     let response = async_minreq::post("http://example.com")
 //!         .with_proxy(proxy)
 //!         .send().await?;
 //!     println!("{}", response.as_str()?);
@@ -209,11 +209,11 @@
 //! - Use [`with_timeout`](struct.Request.html#method.with_timeout) on
 //!   your request to set the timeout per-request like so:
 //!   ```
-//!   minreq::get("/").with_timeout(8).send();
+//!   async_minreq::get("/").with_timeout(8).send();
 //!   ```
 //! - Set the environment variable `MINREQ_TIMEOUT` to the desired
 //!   amount of seconds until timeout. Ie. if you have a program called
-//!   `foo` that uses minreq, and you want all the requests made by that
+//!   `foo` that uses async_minreq, and you want all the requests made by that
 //!   program to timeout in 8 seconds, you launch the program like so:
 //!   ```text,ignore
 //!   $ MINREQ_TIMEOUT=8 ./foo
