@@ -1,8 +1,8 @@
 //! This example demonstrates the `json-using-serde` feature.
 
 #[tokio::main]
-async fn main() -> Result<(), minreq::Error> {
-    let response = minreq::get("http://httpbin.org/anything")
+async fn main() -> Result<(), async_minreq::Error> {
+    let response = async_minreq::get("http://httpbin.org/anything")
         .with_body("Hello, world!")
         .send()
         .await?;
