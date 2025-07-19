@@ -41,6 +41,7 @@ pub(crate) struct HttpUrl {
     pub(crate) fragment: Option<String>,
 }
 
+#[allow(clippy::io_other_error)]
 impl HttpUrl {
     pub(crate) fn parse(url: &str, redirected_from: Option<&HttpUrl>) -> Result<HttpUrl, Error> {
         enum UrlParseStatus {

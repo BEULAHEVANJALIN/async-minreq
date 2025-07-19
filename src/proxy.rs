@@ -84,6 +84,7 @@ impl Proxy {
         })
     }
 
+    #[allow(deprecated)]
     pub(crate) fn connect(&self, proxied_req: &ParsedRequest) -> String {
         let authorization = if let Some(user) = &self.user {
             match self.kind {

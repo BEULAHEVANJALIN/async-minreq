@@ -166,6 +166,7 @@ impl Connection {
         }
     }
 
+    #[allow(clippy::io_other_error)]
     #[cfg(feature = "rustls")]
     async fn send_https_without_timeout(mut self) -> Result<ResponseLazy, Error> {
         self.request.url.host = ensure_ascii_host(self.request.url.host)?;
@@ -207,12 +208,11 @@ impl Connection {
     ))]
     pub(crate) async fn send_https(mut self) -> Result<ResponseLazy, Error> {
         let duration = timeout_at_to_duration(self.timeout_at)?;
-        let native = TlsConnector::builder()
+        let native = NativeTlsConnector::builder()
             .build()
             .map_err(|e| Error::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
         let connector = TokioTlsConnector::from(native);
-
         let func = async move {
             self.request.url.host = ensure_ascii_host(self.request.url.host)?;
             let bytes = self.request.as_bytes();
@@ -321,6 +321,7 @@ impl Connection {
         })
     }
 
+    #[allow(clippy::io_other_error)]
     async fn connect(&self) -> Result<TcpStream, Error> {
         #[cfg(feature = "proxy")]
         match self.request.config.proxy {

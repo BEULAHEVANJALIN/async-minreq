@@ -434,6 +434,7 @@ impl ParsedRequest {
     /// Returns the redirected version of this Request, unless an
     /// infinite redirection loop was detected, or the redirection
     /// limit was reached.
+    #[allow(clippy::io_other_error)]
     pub(crate) fn redirect_to(&mut self, url: &str) -> Result<(), Error> {
         if url.contains("://") {
             let mut url = HttpUrl::parse(url, Some(&self.url)).map_err(|_| {

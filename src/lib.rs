@@ -248,7 +248,7 @@ extern crate serde_json;
 extern crate tokio_native_tls;
 #[cfg(all(feature = "tokio-native-tls", not(feature = "openssl")))]
 extern crate tokio_native_tls;
-#[cfg(any(feature = "webpki-roots"))]
+#[cfg(feature = "webpki-roots")]
 extern crate webpki_roots;
 
 mod connection;
