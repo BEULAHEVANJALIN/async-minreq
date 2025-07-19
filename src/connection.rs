@@ -149,7 +149,7 @@ impl Connection {
     /// The Result will be Err if the timeout has already passed.
     fn timeout(&self) -> Result<Option<Duration>, io::Error> {
         let timeout = timeout_at_to_duration(self.timeout_at);
-        log::trace!("Timeout requested, it is currently: {:?}", timeout);
+        log::trace!("Timeout requested, it is currently: {timeout:?}");
         timeout
     }
 
@@ -430,7 +430,7 @@ fn get_redirect(mut connection: Connection, status_code: i32, url: Option<&Strin
                 Some(url) => url,
                 None => return NextHop::Redirect(Err(Error::RedirectLocationMissing)),
             };
-            log::debug!("Redirecting ({}) to: {}", status_code, url);
+            log::debug!("Redirecting ({status_code}) to: {url}");
 
             match connection.request.redirect_to(url.as_str()) {
                 Ok(()) => {

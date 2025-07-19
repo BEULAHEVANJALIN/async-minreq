@@ -86,12 +86,12 @@ impl fmt::Display for Error {
         use Error::*;
         match self {
             #[cfg(feature = "json-using-serde")]
-            SerdeJsonError(err) => write!(f, "{}", err),
-            IoError(err) => write!(f, "{}", err),
-            InvalidUtf8InBody(err) => write!(f, "{}", err),
+            SerdeJsonError(err) => write!(f, "{err}"),
+            IoError(err) => write!(f, "{err}"),
+            InvalidUtf8InBody(err) => write!(f, "{err}"),
 
             #[cfg(feature = "rustls")]
-            RustlsCreateConnection(err) => write!(f, "error creating rustls connection: {}", err),
+            RustlsCreateConnection(err) => write!(f, "error creating rustls connection: {err}"),
             MalformedChunkLength => write!(f, "non-usize chunk length with transfer-encoding: chunked"),
             MalformedChunkEnd => write!(f, "chunk did not end after reading the expected amount of bytes"),
             MalformedContentLength => write!(f, "non-usize content length"),
@@ -112,7 +112,7 @@ impl fmt::Display for Error {
             // TODO: Uncomment these two for 3.0
             // InvalidProtocol => write!(f, "the url does not start with http:// or https://"),
             // InvalidProtocolInRedirect => write!(f, "got redirected to an absolute url which does not start with http:// or https://"),
-            Other(msg) => write!(f, "error in async_minreq: please open an issue in the async_minreq repo, include the following: '{}'", msg),
+            Other(msg) => write!(f, "error in async_minreq: please open an issue in the async_minreq repo, include the following: '{msg}'"),
         }
     }
 }

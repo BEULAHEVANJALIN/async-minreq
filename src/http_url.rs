@@ -183,7 +183,7 @@ impl HttpUrl {
             host = &self.host,
         )?;
         if let Port::Explicit(port) = self.port {
-            write!(dst, ":{}", port)?;
+            write!(dst, ":{port}")?;
         }
         Ok(())
     }

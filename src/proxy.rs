@@ -90,11 +90,11 @@ impl Proxy {
             match self.kind {
                 ProxyKind::Basic => {
                     let creds = if let Some(password) = &self.password {
-                        base64::encode(format!("{}:{}", user, password))
+                        base64::encode(format!("{user}:{password}"))
                     } else {
                         base64::encode(user)
                     };
-                    format!("Proxy-Authorization: Basic {}\r\n", creds)
+                    format!("Proxy-Authorization: Basic {creds}\r\n")
                 }
             }
         } else {
@@ -102,10 +102,7 @@ impl Proxy {
         };
         let host = &proxied_req.url.host;
         let port = proxied_req.url.port.port();
-        format!(
-            "CONNECT {}:{} HTTP/1.1\r\n{}\r\n",
-            host, port, authorization
-        )
+        format!("CONNECT {host}:{port} HTTP/1.1\r\n{authorization}\r\n",)
     }
 
     pub(crate) fn verify_response(response: &[u8]) -> Result<(), Error> {

@@ -100,7 +100,7 @@ fn load_android_root_certs(connector: &mut SslContextBuilder) -> Result<(), Erro
             .filter_map(|b| X509::from_pem(&b).ok());
         for cert in certs {
             if let Err(err) = connector.cert_store_mut().add_cert(cert) {
-                debug!("load_android_root_certs error: {:?}", err);
+                debug!("load_android_root_certs error: {err:?}");
             }
         }
     }
@@ -128,7 +128,7 @@ impl fmt::Display for Error {
         match *self {
             Error::Normal(ref e) => fmt::Display::fmt(e, fmt),
             Error::Ssl(ref e, X509VerifyResult::OK) => fmt::Display::fmt(e, fmt),
-            Error::Ssl(ref e, v) => write!(fmt, "{} ({})", e, v),
+            Error::Ssl(ref e, v) => write!(fmt, "{e} ({v})"),
         }
     }
 }
@@ -277,7 +277,7 @@ impl TlsConnector {
 
         for cert in &builder.root_certificates {
             if let Err(err) = connector.cert_store_mut().add_cert((cert.0).0.clone()) {
-                debug!("add_cert error: {:?}", err);
+                debug!("add_cert error: {err:?}");
             }
         }
 

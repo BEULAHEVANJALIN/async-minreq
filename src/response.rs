@@ -107,7 +107,7 @@ impl Response {
     /// # async fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// # let url = "http://example.org/";
     /// let response = async_minreq::get(url).send().await?;
-    /// println!("{:?}", response.as_bytes());
+    /// println!("{response.as_bytes():?}");
     /// # Ok(())
     /// # }
     /// ```
@@ -125,7 +125,7 @@ impl Response {
     /// # async fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// # let url = "http://example.org/";
     /// let response = async_minreq::get(url).send().await?;
-    /// println!("{:?}", response.into_bytes());
+    /// println!("{response.into_bytes():?}");
     /// // This would error, as into_bytes consumes the Response:
     /// // let x = response.status_code;
     /// # Ok(())

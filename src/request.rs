@@ -50,7 +50,7 @@ impl fmt::Display for Method {
             Method::Options => write!(f, "OPTIONS"),
             Method::Trace => write!(f, "TRACE"),
             Method::Patch => write!(f, "PATCH"),
-            Method::Custom(ref s) => write!(f, "{}", s),
+            Method::Custom(ref s) => write!(f, "{s}"),
         }
     }
 }
@@ -138,7 +138,7 @@ impl Request {
         let body = body.into();
         let body_length = body.len();
         self.body = Some(body);
-        self.with_header("Content-Length", format!("{}", body_length))
+        self.with_header("Content-Length", format!("{body_length}"))
     }
 
     /// Adds given key and value as query parameter to request url
@@ -387,13 +387,13 @@ impl ParsedRequest {
         )
         .unwrap();
         if let Port::Explicit(port) = self.url.port {
-            write!(http, ":{}", port).unwrap();
+            write!(http, ":{port}").unwrap();
         }
         http += "\r\n";
 
         // Add other headers
         for (k, v) in &self.config.headers {
-            write!(http, "{}: {}\r\n", k, v).unwrap();
+            write!(http, "{k}: {v}\r\n").unwrap();
         }
 
         if self.config.method == Method::Post
