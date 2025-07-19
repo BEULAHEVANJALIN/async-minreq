@@ -8,15 +8,15 @@ use std::time::Duration;
 use tokio::io::{self, AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{timeout, Instant};
-#[cfg(any(
-    feature = "rustls-webpki",
-    feature = "webpki-roots",
-    feature = "rustls"
-))]
+#[cfg(any(feature = "rustls-webpki", feature = "webpki-roots"))]
 use webpki_roots::TLS_SERVER_ROOTS;
 #[cfg(all(
     not(feature = "rustls"),
-    any(feature = "openssl", feature = "native-tls")
+    any(
+        feature = "openssl",
+        feature = "native-tls",
+        feature = "tokio-native-tls"
+    )
 ))]
 use {
     crate::tokio_native_tls::native_tls::TlsConnector as NativeTlsConnector,
@@ -202,6 +202,7 @@ impl Connection {
 
     // / Sends the [`Request`](struct.Request.html), consumes this
     // / connection, and returns a [`Response`](struct.Response.html).
+    #[allow(clippy::io_other_error)]
     #[cfg(all(
         not(feature = "rustls"),
         any(feature = "openssl", feature = "native-tls")
@@ -250,7 +251,7 @@ impl Connection {
             )
             .await?;
 
-            Ok(handle_redirects(self, response).await?)
+            handle_redirects(self, response).await
         };
 
         if let Some(dur) = duration {

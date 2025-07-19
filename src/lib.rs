@@ -220,7 +220,7 @@
 //!   ```
 //!   Or add the following somewhere before the requests in the code.
 //!   ```
-//!   unsafe{
+//!   unsafe {
 //!   std::env::set_var("MINREQ_TIMEOUT", "8");
 //!   }
 //!   ```
