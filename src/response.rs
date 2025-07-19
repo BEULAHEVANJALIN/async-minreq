@@ -151,10 +151,16 @@ impl Response {
     /// ```no_run
     /// use serde_json::Value;
     ///
-    /// # fn main() -> Result<(), async_minreq::Error> {
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), async_minreq::Error> {
     /// # let url_to_json_resource = "http://example.org/resource.json";
     /// // Value could be any type that implements Deserialize!
-    /// let user = async_minreq::get(url_to_json_resource).send()?.json::<Value>()?;
+    ///     let response = async_minreq::get(url_to_json_resource)
+    ///         .send()
+    ///         .await?;
+    /// // Value could be any type that implements Deserialize!
+    ///     let user: Value = response
+    ///         .json::<Value>()?;
     /// println!("User name is '{}'", user["name"]);
     /// # Ok(())
     /// # }

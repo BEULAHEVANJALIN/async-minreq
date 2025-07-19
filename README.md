@@ -1,8 +1,8 @@
 # async-minreq
 [![Crates.io](https://img.shields.io/crates/d/async-minreq.svg)](https://crates.io/crates/async-minreq)
 <!-- [![Documentation](https://docs.rs/minreq/badge.svg)](https://docs.rs/minreq) -->
-![Unit tests](https://github.com/BEULAHEVANJALIN/async-minreq/actions)
-![MSRV](https://github.com/BEULAHEVANJALIN/async-minreq/actions)
+![Unit tests](https://github.com/BEULAHEVANJALIN/async-minreq/actions/workflows/unit-tests.yml/badge.svg)
+![MSRV](https://github.com/BEULAHEVANJALIN/async-minreq/actions/workflows/msrv.yml/badge.svg)
 
 This crate is fork of the crate [minreq](https://github.com/neonmoe/minreq), with async capabilities.
 Simple, async minimal-dependency HTTP client. Optional features for json
