@@ -220,7 +220,9 @@
 //!   ```
 //!   Or add the following somewhere before the requests in the code.
 //!   ```
+//!   unsafe{
 //!   std::env::set_var("MINREQ_TIMEOUT", "8");
+//!   }
 //!   ```
 //! If the timeout is set with `with_timeout`, the environment
 //! variable will be ignored.
@@ -238,7 +240,7 @@ extern crate log;
 extern crate native_tls;
 #[cfg(feature = "openssl-probe")]
 extern crate openssl_probe;
-#[cfg(all(feature = "native-tls", not(feature = "openssl")))]
+#[cfg(any(feature = "tokio-native-tls", feature = "openssl"))]
 extern crate tokio_native_tls;
 #[cfg(feature = "webpki-roots")]
 extern crate webpki;

@@ -5,18 +5,22 @@ use std::future::Future;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
 use std::time::Duration;
-use tokio::io::{self, AsyncRead, AsyncReadExt, AsyncWriteExt};
+use tokio::io::{self, AsyncRead};
 use tokio::net::TcpStream;
 use tokio::time::{timeout, Instant};
-#[cfg(any(feature = "rustls-webpki", feature = "rustls"))]
+#[cfg(any(
+    feature = "rustls-webpki",
+    feature = "webpki-roots",
+    feature = "rustls"
+))]
 use webpki_roots::TLS_SERVER_ROOTS;
 #[cfg(all(
     not(feature = "rustls"),
     any(feature = "openssl", feature = "native-tls")
 ))]
 use {
-    crate::native_tls::TlsConnector, crate::tokio_native_tls::TlsConnector as TokioTlsConnector,
-    crate::tokio_native_tls::TlsStream,
+    crate::tokio_native_tls::native_tls::TlsConnector as NativeTlsConnector,
+    crate::tokio_native_tls::TlsConnector as TokioTlsConnector, crate::tokio_native_tls::TlsStream,
 };
 #[cfg(feature = "rustls")]
 use {
@@ -60,6 +64,7 @@ type SecuredStream = TlsStream<TcpStream>;
 ))]
 type SecuredStream = TlsStream<TcpStream>;
 
+#[allow(dead_code)]
 pub(crate) enum HttpStream {
     Unsecured(UnsecuredStream, Option<Instant>),
     #[cfg(any(feature = "rustls", feature = "openssl", feature = "native-tls"))]
@@ -96,6 +101,7 @@ fn timeout_at_to_duration(timeout_at: Option<Instant>) -> Result<Option<Duration
     }
 }
 
+#[allow(unreachable_patterns)]
 impl AsyncRead for HttpStream {
     fn poll_read(
         self: std::pin::Pin<&mut Self>,

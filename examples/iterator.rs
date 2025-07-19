@@ -14,7 +14,7 @@ async fn main() -> Result<(), async_minreq::Error> {
 
         // The `byte` is the current u8 of data we're iterating
         // through.
-        print!("{}", String::from_utf8((&bytes).to_vec()).unwrap());
+        print!("{}", String::from_utf8((bytes).to_vec()).unwrap());
 
         // The `len` is the expected amount of incoming bytes
         // including the current one: this will be the rest of the

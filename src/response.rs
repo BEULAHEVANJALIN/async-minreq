@@ -4,8 +4,8 @@ use futures_core::Stream;
 use pin_project::pin_project;
 use std::collections::HashMap;
 use std::pin::Pin;
+use std::str;
 use std::task::{Context, Poll};
-use std::{str};
 use tokio::io::{self, AsyncRead, BufReader};
 use tokio_stream::StreamExt;
 use tokio_util::io::ReaderStream;
@@ -289,9 +289,7 @@ impl Stream for ResponseLazy {
 
         match this.state {
             EndOnClose => read_until_closed(prefix, stream, cx),
-            ContentLength(ref mut length) => {
-                read_with_content_length(prefix, stream, length, cx)
-            }
+            ContentLength(ref mut length) => read_with_content_length(prefix, stream, length, cx),
             Chunked(ref mut expecting_chunks, ref mut length, ref mut content_length) => {
                 read_chunked(
                     prefix,
@@ -426,6 +424,7 @@ fn read_trailers(
     Poll::Ready(Ok(()))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn read_chunked(
     prefix: Trailing,
     mut bytes: Pin<&mut HttpStreamBytes>,
