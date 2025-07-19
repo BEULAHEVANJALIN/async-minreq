@@ -5,7 +5,7 @@ use std::future::Future;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
 use std::time::Duration;
-use tokio::io::{self, AsyncRead};
+use tokio::io::{self, AsyncRead, AsyncWriteExt, AsyncReadExt};
 use tokio::net::TcpStream;
 use tokio::time::{timeout, Instant};
 #[cfg(any(
