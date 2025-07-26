@@ -244,9 +244,7 @@ extern crate openssl_probe;
 extern crate serde;
 #[cfg(feature = "json-using-serde")]
 extern crate serde_json;
-#[cfg(feature = "openssl")]
-extern crate tokio_native_tls;
-#[cfg(all(feature = "tokio-native-tls", not(feature = "openssl")))]
+#[cfg(any(feature = "tokio-native-tls", feature = "openssl"))]
 extern crate tokio_native_tls;
 #[cfg(feature = "webpki-roots")]
 extern crate webpki_roots;

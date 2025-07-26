@@ -24,7 +24,6 @@ fmt:
 #Checking code style and lints
 [group('dev')]
 lint: fmt
-    cargo fmt -- --check
     cargo clippy -- -D warnings
 
 #Running tests for async-minreq
