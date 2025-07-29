@@ -5,6 +5,7 @@ use self::setup::*;
 use std::io;
 
 #[tokio::test]
+#[ignore]
 #[cfg(any(feature = "rustls", feature = "openssl", feature = "native-tls"))]
 async fn test_https() {
     // TODO: Implement this locally.

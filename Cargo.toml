@@ -1,16 +1,16 @@
 [package]
 name = "async_minreq"
-version = "2.13.3-alpha"
+version = "0.1.0"
 authors = ["Jens Pitkanen <jens@neon.moe>", "Beulah Evanjalain" ]
 description = "Simple, minimal-dependency HTTP client"
-# documentation = "https://docs.rs/minreq"
+documentation = "https://docs.rs/async-minreq"
 homepage = "https://github.com/BEULAHEVANJALIN/async-minreq"
 repository = "https://github.com/BEULAHEVANJALIN/async-minreq"
 readme = "README.md"
 keywords = ["http", "https", "client", "request", "json"]
 categories = ["web-programming::http-client"]
 license = "ISC"
-edition = "2018"
+edition = "2021"
 
 [badges]
 travis-ci = { repository = "BEULAHEVANJALIN/async-minreq" }
@@ -58,10 +58,10 @@ features = ["json-using-serde", "proxy", "https", "punycode"]
 [features]
 https = ["https-rustls"]
 https-rustls = ["rustls", "webpki-roots", "rustls-webpki"]
-https-rustls-probe = ["rustls", "rustls-native-certs"]
-https-bundled = ["openssl/vendored"]
-https-bundled-probe = ["https-bundled", "openssl-probe"]
-https-native = ["dep:tokio-native-tls","native-tls"]
+https-rustls-probe = ["rustls", "webpki-roots", "rustls-native-certs"]
+https-bundled = ["openssl/vendored", "tokio-native-tls"]
+https-bundled-probe = ["https-bundled", "openssl-probe", "tokio-native-tls"]
+https-native = ["tokio-native-tls","native-tls"]
 json-using-serde = ["serde", "serde_json"]
 proxy = ["base64"]
 

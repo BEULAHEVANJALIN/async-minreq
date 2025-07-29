@@ -4,8 +4,8 @@ use futures_core::Stream;
 use pin_project::pin_project;
 use std::collections::HashMap;
 use std::pin::Pin;
+use std::str;
 use std::task::{Context, Poll};
-use std::{str, usize};
 use tokio::io::{self, AsyncRead, BufReader};
 use tokio_stream::StreamExt;
 use tokio_util::io::ReaderStream;
@@ -20,8 +20,8 @@ const MAX_CONTENT_LENGTH: usize = 16 * 1024;
 /// # Example
 ///
 /// ```no_run
-/// # async fn run() -> Result<(), minreq::Error> {
-/// let response = minreq::get("http://example.com").send().await?;
+/// # async fn run() -> Result<(), async_minreq::Error> {
+/// let response = async_minreq::get("http://example.com").send().await?;
 /// println!("{}", response.as_str()?);
 /// # Ok(()) }
 /// ```
@@ -85,7 +85,7 @@ impl Response {
     /// ```no_run
     /// # async fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// # let url = "http://example.org/";
-    /// let response = minreq::get(url).send().await?;
+    /// let response = async_minreq::get(url).send().await?;
     /// println!("{}", response.as_str()?);
     /// # Ok(())
     /// # }
@@ -106,7 +106,7 @@ impl Response {
     /// ```no_run
     /// # async fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// # let url = "http://example.org/";
-    /// let response = minreq::get(url).send().await?;
+    /// let response = async_minreq::get(url).send().await?;
     /// println!("{:?}", response.as_bytes());
     /// # Ok(())
     /// # }
@@ -124,7 +124,7 @@ impl Response {
     /// ```no_run
     /// # async fn run() -> Result<(), Box<dyn std::error::Error>> {
     /// # let url = "http://example.org/";
-    /// let response = minreq::get(url).send().await?;
+    /// let response = async_minreq::get(url).send().await?;
     /// println!("{:?}", response.into_bytes());
     /// // This would error, as into_bytes consumes the Response:
     /// // let x = response.status_code;
@@ -151,10 +151,16 @@ impl Response {
     /// ```no_run
     /// use serde_json::Value;
     ///
-    /// # fn main() -> Result<(), minreq::Error> {
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), async_minreq::Error> {
     /// # let url_to_json_resource = "http://example.org/resource.json";
     /// // Value could be any type that implements Deserialize!
-    /// let user = minreq::get(url_to_json_resource).send()?.json::<Value>()?;
+    ///     let response = async_minreq::get(url_to_json_resource)
+    ///         .send()
+    ///         .await?;
+    /// // Value could be any type that implements Deserialize!
+    ///     let user: Value = response
+    ///         .json::<Value>()?;
     /// println!("User name is '{}'", user["name"]);
     /// # Ok(())
     /// # }
@@ -185,7 +191,7 @@ impl Response {
 ///
 /// In practice, "lazy loading" means that the bytes are only loaded
 /// as you iterate through them. The bytes are provided in the form of
-/// a `Result<(u8, usize), minreq::Error>`, as the reading operation
+/// a `Result<(u8, usize), async_minreq::Error>`, as the reading operation
 /// can fail in various ways. The `u8` is the actual byte that was
 /// read, and `usize` is how many bytes we are expecting to read in
 /// the future (including this byte). Note, however, that the `usize`
@@ -199,8 +205,8 @@ impl Response {
 /// ```no_run
 /// // This is how the normal Response works behind the scenes, and
 /// // how you might use ResponseLazy.
-/// # async fn run() -> Result<(), minreq::Error> {
-/// let mut response = minreq::get("http://example.com").send_lazy().await?;
+/// # async fn run() -> Result<(), async_minreq::Error> {
+/// let mut response = async_minreq::get("http://example.com").send_lazy().await?;
 /// let mut vec = Vec::new();
 /// use tokio_stream::StreamExt;
 /// while let Some(result) = response.next().await {
@@ -253,7 +259,7 @@ impl ResponseLazy {
             trailing_content,
         } = read_metadata(&mut stream, max_headers_size, max_status_line_len).await?;
 
-        let trailing_content = if trailing_content.len() == 0 {
+        let trailing_content = if trailing_content.is_empty() {
             None
         } else {
             Some(trailing_content)
@@ -289,10 +295,7 @@ impl Stream for ResponseLazy {
 
         match this.state {
             EndOnClose => read_until_closed(prefix, stream, cx),
-            ContentLength(ref mut length) => {
-                let dbg = read_with_content_length(prefix, stream, length, cx);
-                dbg
-            }
+            ContentLength(ref mut length) => read_with_content_length(prefix, stream, length, cx),
             Chunked(ref mut expecting_chunks, ref mut length, ref mut content_length) => {
                 read_chunked(
                     prefix,
@@ -319,7 +322,7 @@ impl AsyncRead for ResponseLazy {
         let stream: Pin<&mut HttpStreamBytes> = this.stream;
 
         if let Some(prefix) = this.trailing_content {
-            buf.put_slice(&prefix);
+            buf.put_slice(prefix);
             *this.trailing_content = None;
         }
 
@@ -345,7 +348,7 @@ fn read_until_closed(
     bytes: Pin<&mut HttpStreamBytes>,
     cx: &mut Context<'_>,
 ) -> Poll<Option<<ResponseLazy as Stream>::Item>> {
-    if prefix.len() > 0 {
+    if !prefix.is_empty() {
         return process_prefix(&prefix);
     }
     match bytes.poll_next(cx) {
@@ -427,6 +430,7 @@ fn read_trailers(
     Poll::Ready(Ok(()))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn read_chunked(
     prefix: Trailing,
     mut bytes: Pin<&mut HttpStreamBytes>,

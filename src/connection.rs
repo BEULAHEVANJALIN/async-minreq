@@ -8,15 +8,19 @@ use std::time::Duration;
 use tokio::io::{self, AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::{timeout, Instant};
-#[cfg(any(feature = "rustls-webpki", feature = "rustls"))]
+#[cfg(any(feature = "rustls-webpki", feature = "webpki-roots"))]
 use webpki_roots::TLS_SERVER_ROOTS;
 #[cfg(all(
     not(feature = "rustls"),
-    any(feature = "openssl", feature = "native-tls")
+    any(
+        feature = "openssl",
+        feature = "native-tls",
+        feature = "tokio-native-tls"
+    )
 ))]
 use {
-    crate::native_tls::TlsConnector, crate::tokio_native_tls::TlsConnector as TokioTlsConnector,
-    crate::tokio_native_tls::TlsStream,
+    crate::tokio_native_tls::native_tls::TlsConnector as NativeTlsConnector,
+    crate::tokio_native_tls::TlsConnector as TokioTlsConnector, crate::tokio_native_tls::TlsStream,
 };
 #[cfg(feature = "rustls")]
 use {
@@ -60,6 +64,7 @@ type SecuredStream = TlsStream<TcpStream>;
 ))]
 type SecuredStream = TlsStream<TcpStream>;
 
+#[allow(dead_code)]
 pub(crate) enum HttpStream {
     Unsecured(UnsecuredStream, Option<Instant>),
     #[cfg(any(feature = "rustls", feature = "openssl", feature = "native-tls"))]
@@ -96,6 +101,7 @@ fn timeout_at_to_duration(timeout_at: Option<Instant>) -> Result<Option<Duration
     }
 }
 
+#[allow(unreachable_patterns)]
 impl AsyncRead for HttpStream {
     fn poll_read(
         self: std::pin::Pin<&mut Self>,
@@ -143,7 +149,7 @@ impl Connection {
     /// The Result will be Err if the timeout has already passed.
     fn timeout(&self) -> Result<Option<Duration>, io::Error> {
         let timeout = timeout_at_to_duration(self.timeout_at);
-        log::trace!("Timeout requested, it is currently: {:?}", timeout);
+        log::trace!("Timeout requested, it is currently: {timeout:?}");
         timeout
     }
 
@@ -160,6 +166,7 @@ impl Connection {
         }
     }
 
+    #[allow(clippy::io_other_error)]
     #[cfg(feature = "rustls")]
     async fn send_https_without_timeout(mut self) -> Result<ResponseLazy, Error> {
         self.request.url.host = ensure_ascii_host(self.request.url.host)?;
@@ -195,18 +202,18 @@ impl Connection {
 
     // / Sends the [`Request`](struct.Request.html), consumes this
     // / connection, and returns a [`Response`](struct.Response.html).
+    #[allow(clippy::io_other_error)]
     #[cfg(all(
         not(feature = "rustls"),
         any(feature = "openssl", feature = "native-tls")
     ))]
     pub(crate) async fn send_https(mut self) -> Result<ResponseLazy, Error> {
         let duration = timeout_at_to_duration(self.timeout_at)?;
-        let native = TlsConnector::builder()
+        let native = NativeTlsConnector::builder()
             .build()
             .map_err(|e| Error::IoError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
 
         let connector = TokioTlsConnector::from(native);
-
         let func = async move {
             self.request.url.host = ensure_ascii_host(self.request.url.host)?;
             let bytes = self.request.as_bytes();
@@ -244,7 +251,7 @@ impl Connection {
             )
             .await?;
 
-            Ok(handle_redirects(self, response).await?)
+            handle_redirects(self, response).await
         };
 
         if let Some(dur) = duration {
@@ -259,57 +266,63 @@ impl Connection {
 
     /// Sends the [`Request`](struct.Request.html), consumes this
     /// connection, and returns a [`Response`](struct.Response.html).
-    pub(crate) fn send(self) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
-       Box::pin(async move { match self.timeout()? {
-            None => self.send_without_timeout().await,
-            Some(duration) => match timeout(duration, self.send_without_timeout()).await {
-                Ok(result) => result,
-                Err(_) => Err(Error::IoError(timeout_err())),
-            },
-        }
-    })
+    pub(crate) fn send(
+        self,
+    ) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
+        Box::pin(async move {
+            match self.timeout()? {
+                None => self.send_without_timeout().await,
+                Some(duration) => match timeout(duration, self.send_without_timeout()).await {
+                    Ok(result) => result,
+                    Err(_) => Err(Error::IoError(timeout_err())),
+                },
+            }
+        })
     }
 
-    fn send_without_timeout(mut self) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
-       Box::pin(async move {  self.request.url.host = ensure_ascii_host(self.request.url.host)?;
-        let bytes = self.request.as_bytes();
+    fn send_without_timeout(
+        mut self,
+    ) -> Pin<Box<dyn Future<Output = Result<ResponseLazy, Error>> + Send + 'static>> {
+        Box::pin(async move {
+            self.request.url.host = ensure_ascii_host(self.request.url.host)?;
+            let bytes = self.request.as_bytes();
 
-        log::trace!("Establishing TCP connection to {}.", self.request.url.host);
-        let tcp = self.connect().await?;
+            log::trace!("Establishing TCP connection to {}.", self.request.url.host);
+            let tcp = self.connect().await?;
 
-        // Send request
-        log::trace!("Writing HTTP request.");
-        loop {
-            // Wait for the socket to be writable
-            tcp.writable().await?;
+            // Send request
+            log::trace!("Writing HTTP request.");
+            loop {
+                // Wait for the socket to be writable
+                tcp.writable().await?;
 
-            match tcp.try_write(&bytes) {
-                Ok(_n) => {
-                    break;
-                }
-                Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                    continue;
-                }
-                Err(e) => {
-                    return Err(e.into());
+                match tcp.try_write(&bytes) {
+                    Ok(_n) => {
+                        break;
+                    }
+                    Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
+                        continue;
+                    }
+                    Err(e) => {
+                        return Err(e.into());
+                    }
                 }
             }
-        }
 
-        // Receive response
-        log::trace!("Reading HTTP response.");
-        let stream = HttpStream::create_unsecured(tcp, self.timeout_at);
-        let response = ResponseLazy::from_stream(
-            stream,
-            self.request.config.max_headers_size,
-            self.request.config.max_status_line_len,
-        )
-        .await?;
-        handle_redirects(self, response).await
-
-    })
+            // Receive response
+            log::trace!("Reading HTTP response.");
+            let stream = HttpStream::create_unsecured(tcp, self.timeout_at);
+            let response = ResponseLazy::from_stream(
+                stream,
+                self.request.config.max_headers_size,
+                self.request.config.max_status_line_len,
+            )
+            .await?;
+            handle_redirects(self, response).await
+        })
     }
 
+    #[allow(clippy::io_other_error)]
     async fn connect(&self) -> Result<TcpStream, Error> {
         #[cfg(feature = "proxy")]
         match self.request.config.proxy {
@@ -320,7 +333,6 @@ impl Connection {
                 tcp.write_all(connect_payload.as_bytes())
                     .await
                     .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                // write!(tcp, "{}", proxy.connect(&self.request)).unwrap();
                 tcp.flush().await?;
 
                 let mut proxy_response = Vec::new();
@@ -418,7 +430,7 @@ fn get_redirect(mut connection: Connection, status_code: i32, url: Option<&Strin
                 Some(url) => url,
                 None => return NextHop::Redirect(Err(Error::RedirectLocationMissing)),
             };
-            log::debug!("Redirecting ({}) to: {}", status_code, url);
+            log::debug!("Redirecting ({status_code}) to: {url}");
 
             match connection.request.redirect_to(url.as_str()) {
                 Ok(()) => {

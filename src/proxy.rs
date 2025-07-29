@@ -47,13 +47,13 @@ impl Proxy {
     /// [http://][user[:password]@]host[:port]
     /// ```
     ///
-    /// The default port is 8080, to be changed to 1080 in minreq 3.0.
+    /// The default port is 8080, to be changed to 1080 in async_minreq 3.0.
     ///
     /// # Example
     ///
     /// ```
-    /// let proxy = minreq::Proxy::new("user:password@localhost:1080").unwrap();
-    /// let request = minreq::post("http://example.com").with_proxy(proxy);
+    /// let proxy = async_minreq::Proxy::new("user:password@localhost:1080").unwrap();
+    /// let request = async_minreq::post("http://example.com").with_proxy(proxy);
     /// ```
     ///
     pub fn new<S: AsRef<str>>(proxy: S) -> Result<Self, Error> {
@@ -84,16 +84,17 @@ impl Proxy {
         })
     }
 
+    #[allow(deprecated)]
     pub(crate) fn connect(&self, proxied_req: &ParsedRequest) -> String {
         let authorization = if let Some(user) = &self.user {
             match self.kind {
                 ProxyKind::Basic => {
                     let creds = if let Some(password) = &self.password {
-                        base64::encode(format!("{}:{}", user, password))
+                        base64::encode(format!("{user}:{password}"))
                     } else {
                         base64::encode(user)
                     };
-                    format!("Proxy-Authorization: Basic {}\r\n", creds)
+                    format!("Proxy-Authorization: Basic {creds}\r\n")
                 }
             }
         } else {
@@ -101,10 +102,7 @@ impl Proxy {
         };
         let host = &proxied_req.url.host;
         let port = proxied_req.url.port.port();
-        format!(
-            "CONNECT {}:{} HTTP/1.1\r\n{}\r\n",
-            host, port, authorization
-        )
+        format!("CONNECT {host}:{port} HTTP/1.1\r\n{authorization}\r\n",)
     }
 
     pub(crate) fn verify_response(response: &[u8]) -> Result<(), Error> {

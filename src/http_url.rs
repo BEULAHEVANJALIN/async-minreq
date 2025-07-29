@@ -41,6 +41,7 @@ pub(crate) struct HttpUrl {
     pub(crate) fragment: Option<String>,
 }
 
+#[allow(clippy::io_other_error)]
 impl HttpUrl {
     pub(crate) fn parse(url: &str, redirected_from: Option<&HttpUrl>) -> Result<HttpUrl, Error> {
         enum UrlParseStatus {
@@ -182,7 +183,7 @@ impl HttpUrl {
             host = &self.host,
         )?;
         if let Port::Explicit(port) = self.port {
-            write!(dst, ":{}", port)?;
+            write!(dst, ":{port}")?;
         }
         Ok(())
     }

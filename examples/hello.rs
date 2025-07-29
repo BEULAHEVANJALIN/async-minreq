@@ -4,6 +4,6 @@
 async fn main() -> Result<(), async_minreq::Error> {
     let response = async_minreq::get("http://example.com").send().await?;
     let html = response.as_str()?;
-    println!("{}", html);
+    println!("{html}");
     Ok(())
 }
