@@ -4,21 +4,26 @@
 ![Unit tests](https://github.com/BEULAHEVANJALIN/async-minreq/actions/workflows/unit-tests.yml/badge.svg)
 ![MSRV](https://github.com/BEULAHEVANJALIN/async-minreq/actions/workflows/msrv.yml/badge.svg)
 
-This crate is fork of the crate [minreq](https://github.com/neonmoe/minreq), with async capabilities.
-Simple, async minimal-dependency HTTP client. Optional features for json
-responses (`json-using-serde`), unicode domains (`punycode`), http
-proxies (`proxy`), and https with various TLS implementations
-(`https-rustls`, `https-rustls-probe`, `https-bundled`,
-`https-bundled-probe`,`https-native`, and `https` which is an alias
-for `https-rustls`).
+async-minreq is a lightweight, minimal-dependency asynchronous HTTP client for Rust. It is a fork of the [minreq](https://github.com/neonmoe/minreq) crate, enhanced with async capabilities using Rust's async/await pattern and the Tokio runtime.
 
-Note: some of the dependencies of this crate (especially `serde` and
-the various `https` libraries) are a lot more complicated than this
-library, and their impact on executable size reflects that.
+###  Features
+- Simple API for sending HTTP requests asynchronously.
+- Optional JSON response handling using serde (json-using-serde).
+- Unicode domain support (punycode).
+- HTTP proxy support (proxy).
+- HTTPS support with flexible TLS implementations:
+    - https-rustls (default)
+    - https-rustls-probe
+    - https-bundled
+    - https-bundled-probe
+    - https-native
 
-## [Documentation](https://docs.rs/async_minreq/latest/async_minreq/)
+Note: Enabling features such as serde or various HTTPS options may significantly increase executable size due to their complexity and dependency footprint.
 
-## Minimum Supported Rust Version (MSRV)
+### Documentation
+Detailed documentation is available on [docs.rs](https://docs.rs/async_minreq/latest/async_minreq/)
+
+### Minimum Supported Rust Version (MSRV)
 
 If you don't care about the MSRV, you can ignore this section
 entirely, including the commands instructed.
@@ -45,5 +50,8 @@ cargo update --package=num-traits --precise=0.2.18
 cargo update --package=libc --precise=0.2.163
 ```
 
-## License
-This crate is distributed under the terms of the [ISC license](COPYING.md).
+### Contributing
+Contributions are welcome! Feel free to open issues, submit pull requests, or suggest improvements.
+
+### License
+`async-minreq` crate is distributed under the terms of the [ISC license](COPYING.md).
