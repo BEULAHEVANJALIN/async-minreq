@@ -1,6 +1,6 @@
 # async-minreq
 [![Crates.io](https://img.shields.io/crates/d/async-minreq.svg)](https://crates.io/crates/async-minreq)
-<!-- [![Documentation](https://docs.rs/minreq/badge.svg)](https://docs.rs/minreq) -->
+[![Documentation](https://img.shields.io/docsrs/async_minreq)](https://docs.rs/async_minreq/latest/async_minreq/)
 ![Unit tests](https://github.com/BEULAHEVANJALIN/async-minreq/actions/workflows/unit-tests.yml/badge.svg)
 ![MSRV](https://github.com/BEULAHEVANJALIN/async-minreq/actions/workflows/msrv.yml/badge.svg)
 
@@ -16,7 +16,7 @@ Note: some of the dependencies of this crate (especially `serde` and
 the various `https` libraries) are a lot more complicated than this
 library, and their impact on executable size reflects that.
 
-## [Documentation](https://docs.rs/async-minreq)
+## [Documentation](https://docs.rs/async_minreq/latest/async_minreq/)
 
 ## Minimum Supported Rust Version (MSRV)
 
